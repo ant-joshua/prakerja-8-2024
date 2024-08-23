@@ -3,13 +3,35 @@ package handler
 import (
 	"ecommerce/helpers"
 	"ecommerce/models"
-	"slices"
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type CategoryHandler struct {
+	db *gorm.DB
+}
+
+// AssignProductToCategory implements CategoryHandlerInterface.
+func (h *CategoryHandler) AssignProductToCategory(c *gin.Context) {
+	panic("unimplemented")
+}
+
+type CategoryHandlerInterface interface {
+	GetCategory(c *gin.Context)
+	CreateCategory(c *gin.Context)
+	DetailCategory(c *gin.Context)
+	UpdateCategory(c *gin.Context)
+	DeleteCategory(c *gin.Context)
+	AssignProductToCategory(c *gin.Context)
+}
+
+func NewCategoryHandler(db *gorm.DB) CategoryHandlerInterface {
+	return &CategoryHandler{
+		db: db,
+	}
 }
 
 var categoryList = []models.Category{
@@ -29,17 +51,37 @@ var categoryList = []models.Category{
 
 func (h *CategoryHandler) GetCategory(c *gin.Context) {
 
+	var categories []models.Category
+
+	err := h.db.Find(&categories).Error
+
+	if err != nil {
+		c.JSON(500, helpers.NewErrorResponse[any](500, "Failed to fetch category"))
+		return
+	}
+
 	c.JSON(200, gin.H{
-		"data": categoryList,
+		"data": categories,
 	})
 }
 
 func (h *CategoryHandler) CreateCategory(c *gin.Context) {
-	var category models.CreateCategoryRequest
+	var req models.CreateCategoryRequest
 
-	err := c.BindJSON(&category)
+	err := c.BindJSON(&req)
 	if err != nil {
 		c.JSON(400, helpers.NewValidationResponse[any](400, "Bad request", err))
+		return
+	}
+
+	category := models.Category{
+		Name: req.Name,
+	}
+
+	err = h.db.Create(&category).Error
+
+	if err != nil {
+		c.JSON(500, helpers.NewErrorResponse[any](500, "Failed to create category"))
 		return
 	}
 
@@ -60,19 +102,17 @@ func (h *CategoryHandler) DetailCategory(c *gin.Context) {
 
 	var categoryData *models.Category
 
-	for _, category := range categoryList {
-		if category.ID == parseCategoryID {
-			categoryData = &category
-			break
-		}
-	}
+	err = h.db.Where("id = ?", parseCategoryID).First(&categoryData).Error
 
-	if categoryData == nil {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(404, helpers.NewErrorResponse[any](404, "Category not found"))
 		return
 	}
 
-	categoryData.ID = parseCategoryID
+	if err != nil {
+		c.JSON(500, helpers.NewErrorResponse[any](500, "Internal Server Error"))
+		return
+	}
 
 	c.JSON(200, gin.H{
 		"data": &categoryData,
@@ -90,18 +130,16 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 	}
 
 	var categoryData *models.Category
-	var categoryIndex int
 
-	for index, category := range categoryList {
-		if category.ID == parseCategoryID {
-			categoryIndex = index
-			categoryData = &category
-			break
-		}
+	err = h.db.Where("id = ?", parseCategoryID).First(&categoryData).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(404, helpers.NewErrorResponse[any](404, "Category not found"))
+		return
 	}
 
-	if categoryData == nil {
-		c.JSON(404, helpers.NewErrorResponse[any](404, "Category not found"))
+	if err != nil {
+		c.JSON(500, helpers.NewErrorResponse[any](500, "Internal Server Error"))
 		return
 	}
 
@@ -115,7 +153,12 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 
 	categoryData.Name = updateCategory.Name
 
-	categoryList[categoryIndex] = *categoryData
+	err = h.db.Save(&categoryData).Error
+
+	if err != nil {
+		c.JSON(500, helpers.NewErrorResponse[any](500, "Failed to update category"))
+		return
+	}
 
 	c.JSON(200, gin.H{
 		"data": &categoryData,
@@ -133,22 +176,25 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	}
 
 	var categoryData *models.Category
-	var categoryIndex int
 
-	for index, category := range categoryList {
-		if category.ID == parseCategoryID {
-			categoryIndex = index
-			categoryData = &category
-			break
-		}
-	}
+	err = h.db.Where("id = ?", parseCategoryID).First(&categoryData).Error
 
-	if categoryData == nil {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(404, helpers.NewErrorResponse[any](404, "Category not found"))
 		return
 	}
 
-	categoryList = slices.Delete(categoryList, categoryIndex, 1)
+	if err != nil {
+		c.JSON(500, helpers.NewErrorResponse[any](500, "Internal Server Error"))
+		return
+	}
+
+	err = h.db.Delete(&categoryData).Error
+
+	if err != nil {
+		c.JSON(500, helpers.NewErrorResponse[any](500, "Failed to delete category"))
+		return
+	}
 
 	c.JSON(200, gin.H{
 		"message": "Category deleted",
