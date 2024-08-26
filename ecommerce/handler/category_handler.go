@@ -4,9 +4,11 @@ import (
 	"ecommerce/helpers"
 	"ecommerce/models"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -50,6 +52,13 @@ var categoryList = []models.Category{
 }
 
 func (h *CategoryHandler) GetCategory(c *gin.Context) {
+
+	user := c.MustGet("user").(jwt.MapClaims)
+
+	fmt.Printf("User: %+v\n", user)
+	userId := user["id"].(float64)
+
+	fmt.Printf("User ID: %v\n", userId)
 
 	var categories []models.Category
 
