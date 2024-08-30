@@ -93,6 +93,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Name:     req.Name,
 		Password: hashPassword,
 		OTPCode:  &otpCode,
+		RoleID:   2,
 	}
 
 	// save user to database
