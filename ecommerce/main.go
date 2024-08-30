@@ -4,6 +4,8 @@ import (
 	"ecommerce/database"
 	"ecommerce/handler"
 	"ecommerce/middleware"
+	"ecommerce/repository"
+	"ecommerce/service"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +33,8 @@ func main() {
 
 	defer sqlDB.Close()
 
+	redisCache := database.NewRedis(0)
+
 	r := gin.Default()
 
 	r.GET("/health-check", func(c *gin.Context) {
@@ -39,18 +43,26 @@ func main() {
 		})
 	})
 
-	categoryHandler := handler.NewCategoryHandler(db)
+	// categoryRepo := repository.NewCategoryORMRepository(db) // gorm
+	categoryRepo := repository.NewCategoryRestAPIRepository()
+	categoryService := service.NewCategoryService(categoryRepo)
+
+	categoryHandler := handler.NewCategoryHandler(db, categoryService)
+
 	productHandler := handler.NewProductHandler(db)
 	authHandler := handler.NewAuthHandler(db)
 
-	r.GET("/categories", middleware.AuthMiddleware(), categoryHandler.GetCategory)
+	authMiddleware := middleware.AuthMiddleware(db)
+	permissionMiddleware := middleware.NewPermissionMiddleware(db, redisCache)
+
+	r.GET("/categories", authMiddleware, categoryHandler.GetCategory)
 	r.POST("/categories", categoryHandler.CreateCategory)
 	r.GET("/categories/:id", categoryHandler.DetailCategory)
 	r.PUT("/categories/:id", categoryHandler.UpdateCategory)
 	r.DELETE("/categories/:id", categoryHandler.DeleteCategory)
 
-	r.GET("/products", productHandler.GetProductList)
-	r.POST("/products", productHandler.CreateProduct)
+	r.GET("/products", authMiddleware, permissionMiddleware.PermissionMiddlewareMap("read_product"), productHandler.GetProductList)
+	r.POST("/products", authMiddleware, permissionMiddleware.PermissionMiddleware("create_product"), productHandler.CreateProduct)
 
 	// Auth handler
 	r.POST("/register", authHandler.Register)

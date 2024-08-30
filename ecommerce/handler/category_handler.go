@@ -3,6 +3,7 @@ package handler
 import (
 	"ecommerce/helpers"
 	"ecommerce/models"
+	"ecommerce/service"
 	"errors"
 	"fmt"
 	"strconv"
@@ -13,7 +14,8 @@ import (
 )
 
 type CategoryHandler struct {
-	db *gorm.DB
+	db              *gorm.DB
+	categoryService service.CategoryService
 }
 
 // AssignProductToCategory implements CategoryHandlerInterface.
@@ -30,9 +32,10 @@ type CategoryHandlerInterface interface {
 	AssignProductToCategory(c *gin.Context)
 }
 
-func NewCategoryHandler(db *gorm.DB) CategoryHandlerInterface {
+func NewCategoryHandler(db *gorm.DB, categoryService service.CategoryService) CategoryHandlerInterface {
 	return &CategoryHandler{
-		db: db,
+		db:              db,
+		categoryService: categoryService,
 	}
 }
 

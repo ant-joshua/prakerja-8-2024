@@ -2,14 +2,15 @@ package middleware
 
 import (
 	"ecommerce/helpers"
-	"fmt"
+	"ecommerce/models"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"gorm.io/gorm"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
+func AuthMiddleware(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// get authorization header
 		getHeader := c.GetHeader("Authorization")
@@ -54,7 +55,45 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenClaims := token.Claims.(jwt.MapClaims)
 
-		fmt.Printf("Token claims: %+v\n", tokenClaims)
+		userID := tokenClaims["id"].(float64)
+
+		// check from database
+		var user models.User
+
+		err = db.Where("id = ?", userID).First(&user).Error
+
+		if err != nil {
+			c.JSON(401, gin.H{
+				"message": "Unauthorized", // user not found
+			})
+
+			c.Abort()
+			return
+		}
+
+		if user.Email != tokenClaims["email"] {
+
+			c.JSON(401, gin.H{
+				"message": "Unauthorized", // email not match
+			})
+
+			c.Abort()
+			return
+		}
+
+		// check if verify email
+
+		if !user.IsVerified {
+			c.JSON(401, gin.H{
+				"message": "Unauthorized", // email not verified
+			})
+
+			c.Abort()
+			return
+		}
+
+		// check if the user is already verify their email
+		// check from database
 
 		c.Set("user", tokenClaims)
 

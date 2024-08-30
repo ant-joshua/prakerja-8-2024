@@ -14,9 +14,10 @@ var (
 )
 
 type JwtCustomClaims struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	RoleID int    `json:"role_id"`
 	jwt.RegisteredClaims
 }
 
@@ -26,6 +27,7 @@ func GenerateToken(user models.User, exp *time.Time) (string, error) {
 		user.ID,
 		user.Name,
 		user.Email,
+		user.RoleID,
 		jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(*exp),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

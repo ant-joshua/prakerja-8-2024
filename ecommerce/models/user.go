@@ -7,6 +7,8 @@ type User struct {
 	Password   string  `json:"password"`
 	IsVerified bool    `json:"is_verified" gorm:"default:false"`
 	OTPCode    *string `json:"otp_code" gorm:"column:otp_code"` // 6 digit code
+	RoleID     int     `json:"role_id"`
+	Role       Role    `json:"role" gorm:"foreignKey:RoleID"`
 }
 
 type RegisterUserRequest struct {
