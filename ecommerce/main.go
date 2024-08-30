@@ -81,5 +81,5 @@ func main() {
 	r.POST("/verify-otp", authHandler.VerifyOTP)
 	r.POST("/login", authHandler.Login)
 
-	r.Run(":8001")
+	r.Run(":" + viper.GetString("PORT")) // listen and serve on
 }
