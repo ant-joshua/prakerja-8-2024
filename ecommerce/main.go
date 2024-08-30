@@ -19,7 +19,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	db, err := database.InitDatabase()
+	db, err := database.InitDatabase("ecommerce.db")
 
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
